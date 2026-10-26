@@ -1,0 +1,13 @@
+SET DateOut TO $'''%''%'''
+Text.Trim Text: DateIn TrimOption: Text.TrimOption.Both TrimmedText=> DateIn
+IF IsEmpty(DateIn) THEN
+    EXIT FUNCTION
+END
+IF Contains(DateIn, $'''/''', False) THEN
+    Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: DateIn CustomFormat: $'''MM/dd/yyyy''' DateTime=> ParsedDate
+ELSE IF DateIn.Length = 11 THEN
+    Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: DateIn CustomFormat: $'''dd-MMM-yyyy''' DateTime=> ParsedDate
+ELSE
+    Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: DateIn CustomFormat: $'''yyyy-MM-dd''' DateTime=> ParsedDate
+END
+Text.ConvertDateTimeToText.FromCustomDateTime DateTime: ParsedDate CustomFormat: $'''yyyy-MM-dd''' Result=> DateOut

@@ -1,0 +1,42 @@
+# .gitignore for HR-Workforce-Analytics
+# Rule: nothing with employee rows goes public. The Kaggle licence is
+# "Data files © Original Authors", so the data and anything built from it stays local.
+
+# ---------------------------------------------------------------
+# Never publish
+# ---------------------------------------------------------------
+v1-archive/
+03_qa/Manual_Checks.xlsx
+
+# Power BI files hold the data inside them; publish the .pbit template instead
+*.pbix
+
+# ---------------------------------------------------------------
+# Data (Kaggle file and everything derived from it)
+# ---------------------------------------------------------------
+01_raw/
+02_clean_expected/
+
+# 02_clean: keep only the ETL run log (row counts, no employee rows)
+02_clean/*
+!02_clean/ETL_RunLog.csv
+
+# ---------------------------------------------------------------
+# Python leftovers from 04_scripts
+# ---------------------------------------------------------------
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ---------------------------------------------------------------
+# Office, Windows and OneDrive clutter
+# ---------------------------------------------------------------
+~$*
+*.tmp
+*.bak
+*.lnk
+desktop.ini
+Thumbs.db
+.~lock.*

@@ -1,0 +1,34 @@
+
+FUNCTION Unpivot_Attendance GLOBAL
+    Folder.GetFiles Folder: $'''%RawFolder%\\attendance''' FileFilter: $'''Attendance_FY*.xlsx''' IncludeSubfolders: False FailOnAccessDenied: True SortBy1: Folder.SortBy.Name SortDescending1: False SortBy2: Folder.SortBy.NoSort SortDescending2: False SortBy3: Folder.SortBy.NoSort SortDescending3: False Files=> AttFiles
+    Variables.CreateNewDatatable InputTable: { ^['Department', 'WeekEnding', 'SubmittedDate'], [$'''''', $'''''', $''''''] } DataTable=> AttLong
+    Variables.DeleteRowFromDataTable DataTable: AttLong RowIndex: 0
+    SET WideRows TO 0
+    LOOP FOREACH AttFile IN AttFiles
+        Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: AttFile.FullName Visible: False ReadOnly: True UseMachineLocale: False Instance=> AttExcel
+        Excel.GetFirstFreeColumnRow Instance: AttExcel FirstFreeColumn=> AttFirstFreeColumn FirstFreeRow=> AttFirstFreeRow
+        Excel.ReadFromExcel.ReadCells Instance: AttExcel StartColumn: $'''A''' StartRow: 2 EndColumn: AttFirstFreeColumn - 1 EndRow: AttFirstFreeRow - 1 GetCellContentsMode: Excel.GetCellContentsMode.PlainText FirstLineIsHeader: True RangeValue=> Wide
+        Excel.CloseExcel.Close Instance: AttExcel
+        LOOP FOREACH DeptRow IN Wide
+            Variables.IncreaseVariable Value: WideRows IncrementValue: 1
+            Text.Trim Text: DeptRow[0] TrimOption: Text.TrimOption.Both TrimmedText=> DeptNorm
+            Text.ChangeCase Text: DeptNorm NewCase: Text.CaseOption.LowerCase Result=> DeptNorm
+            LOOP LoopIndex FROM 1 TO AttFirstFreeColumn - 2 STEP 1
+                SET Header TO Wide.ColumnHeadersRow[LoopIndex]
+                Text.Replace.ReplaceText Text: Header TextToFind: $'''%'WE '%''' IgnoreCase: False ReplaceWith: $'''%''%''' ActivateEscapeSequences: False ComparisonType: Text.TextComparisonType.CultureSensitive Result=> Header
+                Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: Header CustomFormat: $'''dd-MMM-yy''' DateTime=> WeekDate
+                Text.ConvertDateTimeToText.FromCustomDateTime DateTime: WeekDate CustomFormat: $'''yyyy-MM-dd''' Result=> WeekEnding
+                SET DateIn TO DeptRow[LoopIndex]
+                CALL ParseDate
+                Variables.AddRowToDataTable.AppendRowToDataTable DataTable: AttLong RowToAdd: [DeptNorm, WeekEnding, DateOut]
+            END
+        END
+    END
+    LOOP FOREACH MapRow IN ValueMap
+        IF MapRow['Field'] = $'''Department''' THEN
+            Variables.FindOrReplaceInDataTable.ReplaceItemInDataTableByColumnIndex DataTable: AttLong AllMatches: True ValueToFind: MapRow['RawValueNormalized'] MatchCase: True MatchEntireCellContents: True TextToReplaceWith: MapRow['CleanValue'] ColumnNameOrIndex: $'''Department''' DataTableMatches=> DeptMatches
+        END
+    END
+    File.WriteToCSVFile.WriteCSV VariableToWrite: AttLong CSVFile: $'''%CleanFolder%\\AttendanceSubmissions_Clean.csv''' CsvFileEncoding: File.CSVEncoding.UTF8 IncludeColumnNames: True IfFileExists: File.IfFileExists.Overwrite ColumnsSeparator: File.CSVColumnsSeparator.Comma
+    File.WriteText File: $'''%CleanFolder%\\ETL_RunLog.csv''' TextToWrite: $'''%RunStamp%,Attendance,%WideRows%,%AttLong.RowsCount%''' AppendNewLine: True IfFileExists: File.IfFileExists.Append Encoding: File.FileEncoding.UTF8
+END FUNCTION

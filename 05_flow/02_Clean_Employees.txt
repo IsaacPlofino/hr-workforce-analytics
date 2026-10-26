@@ -1,0 +1,17 @@
+File.ReadFromCSVFile.ReadCSVWithCustomSeparator CSVFile: $'''%RawFolder%\\employees\\HRDataset_v14.csv''' Encoding: File.CSVEncoding.UTF8 TrimFields: True FirstLineContainsColumnNames: True CustomColumnsSeparator: $''',''' CSVTable=> EmpRaw
+Variables.CreateNewDatatable InputTable: { ^['EmpID', 'EmployeeName', 'Department', 'Position', 'ManagerName', 'HireDate', 'TerminationDate', 'TermReason', 'EmploymentStatus', 'RecruitmentSource', 'PerformanceScore'], [$'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $''''''] } DataTable=> EmpClean
+Variables.DeleteRowFromDataTable DataTable: EmpClean RowIndex: 0
+LOOP FOREACH EmpRow IN EmpRaw
+    Text.Replace.ReplaceTextWithRegex Text: EmpRow['Employee_Name'] TextToFind: $'''\\s*,\\s*''' IgnoreCase: False ReplaceWith: $'''%', '%''' ActivateEscapeSequences: False Result=> Name
+    Text.Replace.ReplaceTextWithRegex Text: Name TextToFind: $'''\\s{2,}''' IgnoreCase: False ReplaceWith: $'''%' '%''' ActivateEscapeSequences: False Result=> Name
+    Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: EmpRow['DateofHire'] CustomFormat: $'''M/d/yyyy''' DateTime=> HireDateTime
+    Text.ConvertDateTimeToText.FromCustomDateTime DateTime: HireDateTime CustomFormat: $'''yyyy-MM-dd''' Result=> HireDate
+    SET TermDate TO $'''%''%'''
+    IF IsNotEmpty(EmpRow['DateofTermination']) THEN
+        Text.ConvertTextToDateTime.ToDateTimeCustomFormat Text: EmpRow['DateofTermination'] CustomFormat: $'''M/d/yyyy''' DateTime=> TermDateTime
+        Text.ConvertDateTimeToText.FromCustomDateTime DateTime: TermDateTime CustomFormat: $'''yyyy-MM-dd''' Result=> TermDate
+    END
+    Variables.AddRowToDataTable.AppendRowToDataTable DataTable: EmpClean RowToAdd: [EmpRow['EmpID'], Name, EmpRow['Department'], EmpRow['Position'], EmpRow['ManagerName'], HireDate, TermDate, EmpRow['TermReason'], EmpRow['EmploymentStatus'], EmpRow['RecruitmentSource'], EmpRow['PerformanceScore']]
+END
+File.WriteToCSVFile.WriteCSV VariableToWrite: EmpClean CSVFile: $'''%CleanFolder%\\Employees_Clean.csv''' CsvFileEncoding: File.CSVEncoding.UTF8 IncludeColumnNames: True IfFileExists: File.IfFileExists.Overwrite ColumnsSeparator: File.CSVColumnsSeparator.Comma
+File.WriteText File: $'''%CleanFolder%\\ETL_RunLog.csv''' TextToWrite: $'''%RunStamp%,Employees,%EmpRaw.RowsCount%,%EmpClean.RowsCount%''' AppendNewLine: True IfFileExists: File.IfFileExists.Append Encoding: File.FileEncoding.UTF8

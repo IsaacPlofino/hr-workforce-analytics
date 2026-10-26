@@ -1,0 +1,26 @@
+Field,RawValueNormalized,CleanValue
+Status,completed,Completed
+Status,complete,Completed
+Status,in progress,In Progress
+Status,not started,Not Started
+Status,cancelled,Cancelled
+Status,canceled,Cancelled
+OwnerTeam,hr ops,HR Ops
+OwnerTeam,hr operations,HR Ops
+OwnerTeam,it helpdesk,IT Helpdesk
+OwnerTeam,it help desk,IT Helpdesk
+OwnerTeam,payroll,Payroll
+OwnerTeam,learning & dev,Learning & Dev
+OwnerTeam,l&d,Learning & Dev
+OwnerTeam,learning and dev,Learning & Dev
+OwnerTeam,hiring manager,Hiring Manager
+OwnerTeam,hiring mgr,Hiring Manager
+Department,production,Production
+Department,it / is,IT/IS
+Department,it/is,IT/IS
+Department,sales,Sales
+Department,software eng.,Software Engineering
+Department,software engineering,Software Engineering
+Department,admin offices,Admin Offices
+Department,exec office,Executive Office
+Department,executive office,Executive Office

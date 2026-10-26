@@ -1,0 +1,24 @@
+SET RootFolder TO $'''<project folder>'''
+SET RawFolder TO $'''%RootFolder%\\01_raw'''
+SET CleanFolder TO $'''%RootFolder%\\02_clean'''
+SET RefFolder TO $'''%RootFolder%\\00_reference'''
+DateTime.GetCurrentDateTime.Local DateTimeFormat: DateTime.DateTimeFormat.DateAndTime CurrentDateTime=> CurrentDateTime
+Text.ConvertDateTimeToText.FromCustomDateTime DateTime: CurrentDateTime CustomFormat: $'''yyyy-MM-dd HH:mm:ss''' Result=> RunStamp
+IF (File.IfFile.Exists File: $'''%CleanFolder%\\ETL_RunLog.csv''') THEN
+ELSE
+    File.WriteText File: $'''%CleanFolder%\\ETL_RunLog.csv''' TextToWrite: $'''RunStamp,Table,RowsIn,RowsOut''' AppendNewLine: True IfFileExists: File.IfFileExists.Overwrite Encoding: File.FileEncoding.UTF8
+END
+BLOCK ETL
+ON BLOCK ERROR
+    CALL Log_Error
+END
+    File.ReadFromCSVFile.ReadCSV CSVFile: $'''%RefFolder%\\ValueMap.csv''' Encoding: File.CSVEncoding.UTF8 TrimFields: True FirstLineContainsColumnNames: True ColumnsSeparator: File.CSVColumnsSeparator.Comma CSVTable=> ValueMap
+    Variables.CreateNewList List=> ValidStatuses
+    Variables.AddItemToList Item: $'''Completed''' List: ValidStatuses
+    Variables.AddItemToList Item: $'''In Progress''' List: ValidStatuses
+    Variables.AddItemToList Item: $'''Not Started''' List: ValidStatuses
+    Variables.AddItemToList Item: $'''Cancelled''' List: ValidStatuses
+    CALL Clean_Employees
+    CALL Clean_Onboarding
+    CALL Unpivot_Attendance
+END

@@ -1,0 +1,51 @@
+
+FUNCTION Clean_Onboarding GLOBAL
+    Excel.LaunchExcel.LaunchAndOpenUnderExistingProcess Path: $'''%RawFolder%\\onboarding\\OnboardingTasks_Export_20160930.xlsx''' Visible: False ReadOnly: True UseMachineLocale: False Instance=> ExcelInstance
+    Excel.GetFirstFreeColumnRow Instance: ExcelInstance FirstFreeColumn=> FirstFreeColumn FirstFreeRow=> FirstFreeRow
+    Excel.ReadFromExcel.ReadCells Instance: ExcelInstance StartColumn: $'''A''' StartRow: 3 EndColumn: $'''L''' EndRow: FirstFreeRow - 1 GetCellContentsMode: Excel.GetCellContentsMode.PlainText FirstLineIsHeader: True RangeValue=> ObRaw
+    Excel.CloseExcel.Close Instance: ExcelInstance
+    Variables.CreateNewDatatable InputTable: { ^['TaskID', 'EmpID', 'TaskName', 'OwnerTeam', 'AssignedTo', 'DueDate', 'Status', 'CompletedDate'], [$'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $'''''', $''''''] } DataTable=> ObClean
+    Variables.DeleteRowFromDataTable DataTable: ObClean RowIndex: 0
+    Variables.CreateNewList List=> SeenTaskIDs
+    LOOP FOREACH ObRow IN ObRaw
+        IF IsEmpty(ObRow['Task ID']) THEN
+            NEXT LOOP
+        END
+        IF Contains(SeenTaskIDs, ObRow['Task ID'], False) THEN
+            NEXT LOOP
+        END
+        Variables.AddItemToList Item: ObRow['Task ID'] List: SeenTaskIDs
+        Text.Replace.ReplaceText Text: ObRow['Emp ID'] TextToFind: $'''E''' IgnoreCase: False ReplaceWith: $'''%''%''' ActivateEscapeSequences: False ComparisonType: Text.TextComparisonType.CultureSensitive Result=> EmpID
+        Text.Trim Text: EmpID TrimOption: Text.TrimOption.Both TrimmedText=> EmpID
+        Text.Trim Text: ObRow['Status'] TrimOption: Text.TrimOption.Both TrimmedText=> StatusNorm
+        Text.ChangeCase Text: StatusNorm NewCase: Text.CaseOption.LowerCase Result=> StatusNorm
+        Text.Replace.ReplaceText Text: StatusNorm TextToFind: $'''-''' IgnoreCase: False ReplaceWith: $'''%' '%''' ActivateEscapeSequences: False ComparisonType: Text.TextComparisonType.CultureSensitive Result=> StatusNorm
+        Text.Trim Text: ObRow['Owner Team'] TrimOption: Text.TrimOption.Both TrimmedText=> OwnerNorm
+        Text.ChangeCase Text: OwnerNorm NewCase: Text.CaseOption.LowerCase Result=> OwnerNorm
+        SET DateIn TO ObRow['Due Date']
+        CALL ParseDate
+        SET DueOut TO DateOut
+        SET DateIn TO ObRow['Date Completed']
+        CALL ParseDate
+        SET CompOut TO DateOut
+        Variables.AddRowToDataTable.AppendRowToDataTable DataTable: ObClean RowToAdd: [ObRow['Task ID'], EmpID, ObRow['task_name'], OwnerNorm, ObRow['Assigned To'], DueOut, StatusNorm, CompOut]
+    END
+    LOOP FOREACH MapRow IN ValueMap
+        IF MapRow['Field'] = $'''Status''' THEN
+            Variables.FindOrReplaceInDataTable.ReplaceItemInDataTableByColumnIndex DataTable: ObClean AllMatches: True ValueToFind: MapRow['RawValueNormalized'] MatchCase: True MatchEntireCellContents: True TextToReplaceWith: MapRow['CleanValue'] ColumnNameOrIndex: $'''Status''' DataTableMatches=> StatusMatches
+        ELSE IF MapRow['Field'] = $'''OwnerTeam''' THEN
+            Variables.FindOrReplaceInDataTable.ReplaceItemInDataTableByColumnIndex DataTable: ObClean AllMatches: True ValueToFind: MapRow['RawValueNormalized'] MatchCase: True MatchEntireCellContents: True TextToReplaceWith: MapRow['CleanValue'] ColumnNameOrIndex: $'''OwnerTeam''' DataTableMatches=> OwnerMatches
+        END
+    END
+    SET BadRows TO 0
+    LOOP FOREACH CheckRow IN ObClean
+        IF NotContains(ValidStatuses, CheckRow['Status'], False) THEN
+            Variables.IncreaseVariable Value: BadRows IncrementValue: 1
+        END
+    END
+    IF BadRows > 0 THEN
+        File.WriteText File: $'''%CleanFolder%\\ETL_RunLog.csv''' TextToWrite: $'''%RunStamp%,WARNING_BadStatusRows,%BadRows%,0''' AppendNewLine: True IfFileExists: File.IfFileExists.Append Encoding: File.FileEncoding.UTF8
+    END
+    File.WriteToCSVFile.WriteCSV VariableToWrite: ObClean CSVFile: $'''%CleanFolder%\\OnboardingTasks_Clean.csv''' CsvFileEncoding: File.CSVEncoding.UTF8 IncludeColumnNames: True IfFileExists: File.IfFileExists.Overwrite ColumnsSeparator: File.CSVColumnsSeparator.Comma
+    File.WriteText File: $'''%CleanFolder%\\ETL_RunLog.csv''' TextToWrite: $'''%RunStamp%,OnboardingTasks,%ObRaw.RowsCount%,%ObClean.RowsCount%''' AppendNewLine: True IfFileExists: File.IfFileExists.Append Encoding: File.FileEncoding.UTF8
+END FUNCTION

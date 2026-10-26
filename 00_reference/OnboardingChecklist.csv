@@ -1,0 +1,12 @@
+TaskCode,TaskName,OwnerTeam,DueOffsetDays,Phase
+OB01,Offer & Contract Signed,HR Ops,-14,Pre-boarding
+OB02,Background Check Cleared,HR Ops,-7,Pre-boarding
+OB03,IT Equipment Ready,IT Helpdesk,-1,Pre-boarding
+OB04,Systems Access Provisioned,IT Helpdesk,0,Day 1
+OB05,Day-1 Orientation,HR Ops,0,Day 1
+OB06,Team Introduction & Role Plan,Hiring Manager,3,Week 1
+OB07,Payroll & Benefits Enrollment,Payroll,14,First 30 Days
+OB08,Compliance Training,Learning & Dev,30,First 30 Days
+OB09,30-Day Check-in,Hiring Manager,30,First 30 Days
+OB10,90-Day Probation Review,Hiring Manager,90,First 90 Days
+OB11,6-Month Performance Review,Hiring Manager,180,First 6 Months
